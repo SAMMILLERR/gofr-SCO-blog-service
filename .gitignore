@@ -1,0 +1,26 @@
+# Dependencies
+/vendor
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+
+# Build artifacts
+/bin
+/dist
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Media uploads (in development)
+/uploads/*
+!/uploads/.gitkeep
+
+# Test coverage
+coverage.out
+*.cover
