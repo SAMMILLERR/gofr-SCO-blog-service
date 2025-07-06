@@ -227,9 +227,9 @@ func (ps *PostService) getPostsFromDB(ctx *gofr.Context, limit, offset int) ([]m
     return posts, nil
 }
 
-func (ps *PostService) buildUpdateQuery(id int, req models.UpdatePostRequest) (string, []interface{}) {
+func (ps *PostService) buildUpdateQuery(id int, req models.UpdatePostRequest) (string, []any) {
     setParts := []string{}
-    args := []interface{}{}
+    args := []any{}
     argIndex := 1
 
     if req.Title != "" {

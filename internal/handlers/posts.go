@@ -21,7 +21,7 @@ func NewPostHandler(postService *services.PostService) *PostHandler {
 }
 
 // CreatePost handles POST /api/v1/posts (HTTP decorator pattern)
-func (ph *PostHandler) CreatePost(ctx *gofr.Context) (interface{}, error) {
+func (ph *PostHandler) CreatePost(ctx *gofr.Context) (any, error) {
     // Request parsing decorator
     var req models.CreatePostRequest
     if err := ph.parseCreateRequest(ctx, &req); err != nil {
@@ -39,7 +39,7 @@ func (ph *PostHandler) CreatePost(ctx *gofr.Context) (interface{}, error) {
 }
 
 // GetPost handles GET /api/v1/posts/{id}
-func (ph *PostHandler) GetPost(ctx *gofr.Context) (interface{}, error) {
+func (ph *PostHandler) GetPost(ctx *gofr.Context) (any, error) {
     // Parameter extraction decorator
     id, err := ph.extractIDParam(ctx)
     if err != nil {
@@ -56,7 +56,7 @@ func (ph *PostHandler) GetPost(ctx *gofr.Context) (interface{}, error) {
 }
 
 // ListPosts handles GET /api/v1/posts with pagination
-func (ph *PostHandler) ListPosts(ctx *gofr.Context) (interface{}, error) {
+func (ph *PostHandler) ListPosts(ctx *gofr.Context) (any, error) {
     // Query parameter extraction decorator
     page, pageSize := ph.extractPaginationParams(ctx)
 
@@ -70,7 +70,7 @@ func (ph *PostHandler) ListPosts(ctx *gofr.Context) (interface{}, error) {
 }
 
 // UpdatePost handles PUT /api/v1/posts/{id}
-func (ph *PostHandler) UpdatePost(ctx *gofr.Context) (interface{}, error) {
+func (ph *PostHandler) UpdatePost(ctx *gofr.Context) (any, error) {
     // Parameter extraction decorator
     id, err := ph.extractIDParam(ctx)
     if err != nil {
@@ -93,7 +93,7 @@ func (ph *PostHandler) UpdatePost(ctx *gofr.Context) (interface{}, error) {
 }
 
 // DeletePost handles DELETE /api/v1/posts/{id}
-func (ph *PostHandler) DeletePost(ctx *gofr.Context) (interface{}, error) {
+func (ph *PostHandler) DeletePost(ctx *gofr.Context) (any, error) {
     // Parameter extraction decorator
     id, err := ph.extractIDParam(ctx)
     if err != nil {
@@ -106,7 +106,7 @@ func (ph *PostHandler) DeletePost(ctx *gofr.Context) (interface{}, error) {
         return ph.errorResponse("Failed to delete post", err), nil
     }
 
-    return ph.successResponse("Post deleted successfully", map[string]interface{}{
+    return ph.successResponse("Post deleted successfully", map[string]any{
         "deleted_id": id,
     }), nil
 }
@@ -171,8 +171,8 @@ func (ph *PostHandler) extractPaginationParams(ctx *gofr.Context) (int, int) {
 // Response formatting decorators for consistent API responses
 
 // successResponse creates a standardized success response
-func (ph *PostHandler) successResponse(message string, data interface{}) map[string]interface{} {
-    return map[string]interface{}{
+func (ph *PostHandler) successResponse(message string, data any) map[string]any {
+    return map[string]any{
         "success": true,
         "message": message,
         "data":    data,
@@ -180,8 +180,8 @@ func (ph *PostHandler) successResponse(message string, data interface{}) map[str
 }
 
 // errorResponse creates a standardized error response
-func (ph *PostHandler) errorResponse(message string, err error) map[string]interface{} {
-    response := map[string]interface{}{
+func (ph *PostHandler) errorResponse(message string, err error) map[string]any {
+    response := map[string]any{
         "success": false,
         "message": message,
     }

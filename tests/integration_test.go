@@ -3,7 +3,6 @@ package tests
 import (
     "bytes"
     "encoding/json"
-    "net/http"
     "net/http/httptest"
     "testing"
 )
@@ -42,7 +41,7 @@ func TestPostEndpoints_Integration(t *testing.T) {
 
 func testCreatePost(t *testing.T) {
     // Mock request data
-    postData := map[string]interface{}{
+    postData := map[string]any{
         "title":     "Integration Test Post",
         "content":   "This is a test post for integration testing",
         "slug":      "integration-test-post",
@@ -62,21 +61,21 @@ func testCreatePost(t *testing.T) {
 }
 
 func testListPosts(t *testing.T) {
-    req := httptest.NewRequest("GET", "/api/v1/posts?page=1&page_size=10", nil)
+    _ = httptest.NewRequest("GET", "/api/v1/posts?page=1&page_size=10", nil)
     
     t.Log("Testing list posts endpoint")
     // Implementation would go here
 }
 
 func testGetPost(t *testing.T) {
-    req := httptest.NewRequest("GET", "/api/v1/posts/1", nil)
+    _ = httptest.NewRequest("GET", "/api/v1/posts/1", nil)
     
     t.Log("Testing get single post endpoint")
     // Implementation would go here
 }
 
 func testUpdatePost(t *testing.T) {
-    updateData := map[string]interface{}{
+    updateData := map[string]any{
         "title": "Updated Title",
         "status": "published",
     }
@@ -90,7 +89,7 @@ func testUpdatePost(t *testing.T) {
 }
 
 func testDeletePost(t *testing.T) {
-    req := httptest.NewRequest("DELETE", "/api/v1/posts/1", nil)
+    _ = httptest.NewRequest("DELETE", "/api/v1/posts/1", nil)
     
     t.Log("Testing delete post endpoint")
     // Implementation would go here
