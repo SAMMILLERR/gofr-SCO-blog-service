@@ -13,42 +13,25 @@ A lightweight Content Management System (CMS) built with GoFr framework offering
 ## Project Structure
 
 ```
-├── cmd/
-│   └── server/
-│       └── main.go           # Application entry point
-├── internal/
-│   ├── handlers/             # HTTP handlers
-│   │   ├── posts.go
-│   │   ├── authors.go
-│   │   ├── tags.go
-│   │   ├── comments.go
-│   │   └── media.go
-│   ├── models/              # Data models
-│   │   ├── post.go
-│   │   ├── author.go
-│   │   ├── tag.go
-│   │   ├── comment.go
-│   │   └── media.go
-│   ├── services/            # Business logic
-│   │   ├── post_service.go
-│   │   ├── author_service.go
-│   │   ├── tag_service.go
-│   │   ├── comment_service.go
-│   │   ├── media_service.go
-│   │   └── search_service.go
-│   └── database/            # Database layer
-│       ├── migrations/
-│       └── db.go
-├── api/
-│   └── docs/                # API documentation
-├── uploads/                 # Media files storage
-├── tests/                   # Unit and integration tests
-├── docker/
-│   └── Dockerfile
+├── main.go                  # Application entry point
+├── handlers/                # HTTP handlers
+│   └── posts.go
+├── models/                  # Data models
+│   └── post.go
+├── services/                # Business logic
+│   ├── post_service.go
+│   └── post_service_test.go
+├── database/                # Database layer
+│   └── migrations/
+│       └── 001_create_posts.sql
+├── integration_test.go      # Integration tests
+├── swagger.yaml             # API documentation
+├── .golangci.yml           # Linter configuration
 ├── .env.example
 ├── go.mod
 ├── go.sum
-└── README.md
+└── bin/                    # Built binaries
+    └── blog-service
 ```
 
 ## Development Roadmap
@@ -137,45 +120,89 @@ go run cmd/server/main.go
 
 ## API Endpoints
 
-### Posts
-- `GET /api/v1/posts` - List all posts
-- `GET /api/v1/posts/{id}` - Get specific post
-- `POST /api/v1/posts` - Create new post
-- `PUT /api/v1/posts/{id}` - Update post
-- `DELETE /api/v1/posts/{id}` - Delete post
+### Health Check
+- `GET /health` - Service health check
 
-### Authors
-- `GET /api/v1/authors` - List all authors
-- `GET /api/v1/authors/{id}` - Get specific author
-- `POST /api/v1/authors` - Create new author
-- `PUT /api/v1/authors/{id}` - Update author
-- `DELETE /api/v1/authors/{id}` - Delete author
+### Posts (Currently Implemented)
+- `GET /posts` - List all posts with pagination
+- `GET /posts/{id}` - Get specific post
+- `POST /posts` - Create new post
+- `PUT /posts/{id}` - Update post
+- `DELETE /posts/{id}` - Delete post
 
-### Tags
-- `GET /api/v1/tags` - List all tags
-- `GET /api/v1/tags/{id}` - Get specific tag
-- `POST /api/v1/tags` - Create new tag
-- `PUT /api/v1/tags/{id}` - Update tag
-- `DELETE /api/v1/tags/{id}` - Delete tag
+### Future Endpoints (Planned)
+- `GET /authors` - List all authors
+- `GET /authors/{id}` - Get specific author
+- `POST /authors` - Create new author
+- `PUT /authors/{id}` - Update author
+- `DELETE /authors/{id}` - Delete author
+- `GET /tags` - List all tags
+- `GET /tags/{id}` - Get specific tag
+- `POST /tags` - Create new tag
+- `PUT /tags/{id}` - Update tag
+- `DELETE /tags/{id}` - Delete tag
+- `GET /posts/{id}/comments` - List comments for a post
+- `POST /posts/{id}/comments` - Create new comment
+- `PUT /comments/{id}` - Update comment
+- `DELETE /comments/{id}` - Delete comment
+- `POST /media/upload` - Upload media file
+- `GET /media/{id}` - Get media file
+- `DELETE /media/{id}` - Delete media file
+- `GET /search?q={query}` - Search posts, authors, tags
 
-### Comments
-- `GET /api/v1/posts/{id}/comments` - List comments for a post
-- `POST /api/v1/posts/{id}/comments` - Create new comment
-- `PUT /api/v1/comments/{id}` - Update comment
-- `DELETE /api/v1/comments/{id}` - Delete comment
+## Getting Started
 
-### Media
-- `POST /api/v1/media/upload` - Upload media file
-- `GET /api/v1/media/{id}` - Get media file
-- `DELETE /api/v1/media/{id}` - Delete media file
+### Prerequisites
+- Go 1.24 or higher
+- PostgreSQL database
+- Git
 
-### Search
-- `GET /api/v1/search?q={query}` - Search posts, authors, tags
-- `GET /api/v1/search/posts?q={query}` - Search posts only
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/SAMMILLERR/gofr-SCO-blog-service.git
+cd gofr-SCO-blog-service
+```
+
+2. Install dependencies:
+```bash
+go mod download
+```
+
+3. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your database configuration
+```
+
+4. Run database migrations:
+```bash
+# Migrations are automatically run on application start
+```
+
+5. Build and run the application:
+```bash
+# Build
+go build -o bin/blog-service ./main.go
+
+# Or run directly
+go run main.go
+```
+
+The service will start on `http://localhost:8080`
+
+### API Documentation
+
+The API is documented using OpenAPI 3.0 specification. You can find the complete API documentation in `swagger.yaml`.
+
+To view the documentation:
+- Use any OpenAPI viewer with the `swagger.yaml` file
+- Or visit online tools like [Swagger Editor](https://editor.swagger.io/) and paste the content
 
 ## Testing
 
-Run tests:
+Run all tests:
 ```bash
 go test ./...
 ```
@@ -185,13 +212,61 @@ Run tests with coverage:
 go test -cover ./...
 ```
 
+Run integration tests:
+```bash
+go test -v ./integration_test.go
+```
+
+## Code Quality
+
+### Linting
+
+This project uses `golangci-lint` for code quality checks. The configuration is in `.golangci.yml`.
+
+Install golangci-lint:
+```bash
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+```
+
+Run the linter:
+```bash
+golangci-lint run
+```
+
+Or run with go:
+```bash
+go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run
+```
+
+### Code Formatting
+
+Format code using standard Go tools:
+```bash
+go fmt ./...
+goimports -w .
+```
+
 ## Contributing
 
-1. Create a feature branch
-2. Make your changes
-3. Add tests
-4. Run linters
-5. Submit a pull request
+1. Create a feature branch from `main`
+2. Make your changes following the project structure
+3. Add tests for new functionality
+4. Run linters and ensure all tests pass:
+   ```bash
+   golangci-lint run
+   go test ./...
+   ```
+5. Update documentation if needed
+6. Submit a pull request
+
+### Development Guidelines
+
+- Follow GoFr framework conventions
+- Use dependency injection pattern
+- Write comprehensive tests
+- Keep handlers thin - delegate business logic to services
+- Use proper error handling
+- Document all public functions and types
 
 ## License
 
