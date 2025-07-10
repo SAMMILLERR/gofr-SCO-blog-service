@@ -2,83 +2,72 @@ package services
 
 import (
 	"fmt"
-	"strings"
 
 	"gofr-blog-service/models"
+	"gofr-blog-service/store"
 
 	"gofr.dev/pkg/gofr"
 )
 
 // PostService handles business logic for posts
 type PostService struct {
-	// Using dependency injection pattern - no direct DB dependency
+	postStore *store.PostStore
 }
 
 // NewPostService creates a new post service instance
-func NewPostService() *PostService {
-	return &PostService{}
+func NewPostService(postStore *store.PostStore) *PostService {
+	return &PostService{
+		postStore: postStore,
+	}
 }
 
-// CreatePost creates a new blog post with validation
+// CreatePost creates a new blog post
 func (ps *PostService) CreatePost(ctx *gofr.Context, req models.CreatePostRequest) (*models.Post, error) {
-	// Input validation decorator pattern
-	if err := ps.validateCreateRequest(req); err != nil {
-		return nil, fmt.Errorf("validation failed: %w", err)
-	}
-
-	// Database operation with error handling decorator
-	post, err := ps.createPostInDB(ctx, req)
+	// Let the handler handle validation
+	post, err := ps.postStore.CreatePost(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create post: %w", err)
 	}
 
-	// Success logging decorator could be added here
 	ctx.Logger.Infof("Post created successfully with ID: %d", post.ID)
-
 	return post, nil
 }
 
 // GetPost retrieves a single post by ID
 func (ps *PostService) GetPost(ctx *gofr.Context, id int) (*models.Post, error) {
-	if id <= 0 {
-		return nil, fmt.Errorf("invalid post ID: %d", id)
-	}
-
-	query := `
-        SELECT id, title, content, slug, author_id, status, created_at, updated_at
-        FROM posts WHERE id = $1
-    `
-
-	var post models.Post
-	err := ctx.SQL.QueryRow(query, id).
-		Scan(&post.ID, &post.Title, &post.Content, &post.Slug, &post.AuthorID,
-			&post.Status, &post.CreatedAt, &post.UpdatedAt)
-
+	post, err := ps.postStore.GetPostByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("post not found: %w", err)
+		return nil, fmt.Errorf("failed to get post: %w", err)
 	}
 
-	return &post, nil
+	return post, nil
 }
 
 // ListPosts retrieves posts with pagination
 func (ps *PostService) ListPosts(ctx *gofr.Context, page, pageSize int) (*models.PostListResponse, error) {
-	// Pagination validation decorator
-	page, pageSize = ps.validatePagination(page, pageSize)
+	// Adjust pagination values if needed
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 10
+	}
+	
 	offset := (page - 1) * pageSize
 
-	// Get total count
-	totalCount, err := ps.getTotalPostCount(ctx)
+	// Get total count from store
+	totalCount, err := ps.postStore.GetTotalPostCount(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count posts: %w", err)
 	}
 
-	// Get posts with error handling
-	posts, err := ps.getPostsFromDB(ctx, pageSize, offset)
+	// Get posts from store
+	posts, err := ps.postStore.GetPosts(ctx, pageSize, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query posts: %w", err)
 	}
 
+	// Calculate total pages
 	totalPages := (totalCount + pageSize - 1) / pageSize
 
 	return &models.PostListResponse{
@@ -92,184 +81,24 @@ func (ps *PostService) ListPosts(ctx *gofr.Context, page, pageSize int) (*models
 
 // UpdatePost updates an existing post
 func (ps *PostService) UpdatePost(ctx *gofr.Context, id int, req models.UpdatePostRequest) (*models.Post, error) {
-	if id <= 0 {
-		return nil, fmt.Errorf("invalid post ID: %d", id)
-	}
-
-	// Build dynamic update query (decorator pattern for query building)
-	query, args := ps.buildUpdateQuery(id, req)
-	if len(args) == 1 { // Only ID provided
-		return nil, fmt.Errorf("no fields to update")
-	}
-
-	var post models.Post
-	err := ctx.SQL.QueryRow(query, args...).
-		Scan(&post.ID, &post.Title, &post.Content, &post.Slug, &post.AuthorID,
-			&post.Status, &post.CreatedAt, &post.UpdatedAt)
-
+	// Let the handler handle validation of id
+	post, err := ps.postStore.UpdatePost(ctx, id, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update post: %w", err)
 	}
 
 	ctx.Logger.Infof("Post updated successfully: %d", post.ID)
-	return &post, nil
+	return post, nil
 }
 
 // DeletePost removes a post by ID
 func (ps *PostService) DeletePost(ctx *gofr.Context, id int) error {
-	if id <= 0 {
-		return fmt.Errorf("invalid post ID: %d", id)
-	}
-
-	query := "DELETE FROM posts WHERE id = $1"
-	result, err := ctx.SQL.Exec(query, id)
+	// Let the handler handle validation of id
+	err := ps.postStore.DeletePost(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete post: %w", err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("post not found")
-	}
-
 	ctx.Logger.Infof("Post deleted successfully: %d", id)
 	return nil
-}
-
-// Private helper methods (decorator pattern for separation of concerns)
-
-func (ps *PostService) validateCreateRequest(req models.CreatePostRequest) error {
-	if req.Title == "" {
-		return fmt.Errorf("title is required")
-	}
-	if len(req.Title) < 3 || len(req.Title) > 200 {
-		return fmt.Errorf("title must be between 3 and 200 characters")
-	}
-	if req.Content == "" {
-		return fmt.Errorf("content is required")
-	}
-	if len(req.Content) < 10 {
-		return fmt.Errorf("content must be at least 10 characters")
-	}
-	if req.Slug == "" {
-		return fmt.Errorf("slug is required")
-	}
-	if req.AuthorID <= 0 {
-		return fmt.Errorf("valid author ID is required")
-	}
-	if req.Status == "" {
-		req.Status = "draft"
-	}
-	validStatuses := []string{"draft", "published", "archived"}
-	for _, status := range validStatuses {
-		if req.Status == status {
-			return nil
-		}
-	}
-	return fmt.Errorf("invalid status: %s", req.Status)
-}
-
-func (ps *PostService) validatePagination(page, pageSize int) (validPage, validPageSize int) {
-	validPage = page
-	validPageSize = pageSize
-	if validPage <= 0 {
-		validPage = 1
-	}
-	if validPageSize <= 0 || validPageSize > 100 {
-		validPageSize = 10
-	}
-	return validPage, validPageSize
-}
-
-func (ps *PostService) createPostInDB(ctx *gofr.Context, req models.CreatePostRequest) (*models.Post, error) {
-	query := `
-        INSERT INTO posts (title, content, slug, author_id, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-        RETURNING id, title, content, slug, author_id, status, created_at, updated_at
-    `
-
-	var post models.Post
-	err := ctx.SQL.QueryRow(query, req.Title, req.Content, req.Slug, req.AuthorID, req.Status).
-		Scan(&post.ID, &post.Title, &post.Content, &post.Slug, &post.AuthorID,
-			&post.Status, &post.CreatedAt, &post.UpdatedAt)
-
-	return &post, err
-}
-
-func (ps *PostService) getTotalPostCount(ctx *gofr.Context) (int, error) {
-	var totalCount int
-	countQuery := "SELECT COUNT(*) FROM posts"
-	err := ctx.SQL.QueryRow(countQuery).Scan(&totalCount)
-	return totalCount, err
-}
-
-func (ps *PostService) getPostsFromDB(ctx *gofr.Context, limit, offset int) ([]models.Post, error) {
-	query := `
-        SELECT id, title, content, slug, author_id, status, created_at, updated_at
-        FROM posts 
-        ORDER BY created_at DESC 
-        LIMIT $1 OFFSET $2
-    `
-
-	rows, err := ctx.SQL.Query(query, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var posts []models.Post
-	for rows.Next() {
-		var post models.Post
-		err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.Slug, &post.AuthorID,
-			&post.Status, &post.CreatedAt, &post.UpdatedAt)
-		if err != nil {
-			return nil, err
-		}
-		posts = append(posts, post)
-	}
-
-	return posts, nil
-}
-
-func (ps *PostService) buildUpdateQuery(id int, req models.UpdatePostRequest) (query string, args []any) {
-	setParts := []string{}
-	args = []any{}
-	argIndex := 1
-
-	if req.Title != "" {
-		setParts = append(setParts, fmt.Sprintf("title = $%d", argIndex))
-		args = append(args, req.Title)
-		argIndex++
-	}
-	if req.Content != "" {
-		setParts = append(setParts, fmt.Sprintf("content = $%d", argIndex))
-		args = append(args, req.Content)
-		argIndex++
-	}
-	if req.Slug != "" {
-		setParts = append(setParts, fmt.Sprintf("slug = $%d", argIndex))
-		args = append(args, req.Slug)
-		argIndex++
-	}
-	if req.Status != "" {
-		setParts = append(setParts, fmt.Sprintf("status = $%d", argIndex))
-		args = append(args, req.Status)
-		argIndex++
-	}
-
-	setParts = append(setParts, "updated_at = NOW()")
-	args = append(args, id)
-
-	query = fmt.Sprintf(`
-        UPDATE posts 
-        SET %s 
-        WHERE id = $%d
-        RETURNING id, title, content, slug, author_id, status, created_at, updated_at
-    `, strings.Join(setParts, ", "), argIndex)
-
-	return query, args
 }

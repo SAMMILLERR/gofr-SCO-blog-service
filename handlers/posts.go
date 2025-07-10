@@ -22,12 +22,17 @@ func NewPostHandler(postService *services.PostService) *PostHandler {
 	}
 }
 
-// CreatePost handles POST /api/v1/posts (HTTP decorator pattern)
+// CreatePost handles POST /posts (HTTP decorator pattern)
 func (ph *PostHandler) CreatePost(ctx *gofr.Context) (any, error) {
 	// Request parsing decorator
 	var req models.CreatePostRequest
 	if err := ph.parseCreateRequest(ctx, &req); err != nil {
 		return ph.errorResponse("Invalid request format", err), nil
+	}
+
+	// Validation decorator - moved from service to handler
+	if err := ph.validateCreateRequest(req); err != nil {
+		return ph.errorResponse("Validation failed", err), nil
 	}
 
 	// Business logic delegation decorator
@@ -40,7 +45,7 @@ func (ph *PostHandler) CreatePost(ctx *gofr.Context) (any, error) {
 	return ph.successResponse("Post created successfully", post), nil
 }
 
-// GetPost handles GET /api/v1/posts/{id}
+// GetPost handles GET /posts/{id}
 func (ph *PostHandler) GetPost(ctx *gofr.Context) (any, error) {
 	// Parameter extraction decorator
 	id, err := ph.extractIDParam(ctx)
@@ -57,7 +62,7 @@ func (ph *PostHandler) GetPost(ctx *gofr.Context) (any, error) {
 	return ph.successResponse("Post retrieved successfully", post), nil
 }
 
-// ListPosts handles GET /api/v1/posts with pagination
+// ListPosts handles GET /posts with pagination
 func (ph *PostHandler) ListPosts(ctx *gofr.Context) (any, error) {
 	// Query parameter extraction decorator
 	page, pageSize := ph.extractPaginationParams(ctx)
@@ -71,7 +76,7 @@ func (ph *PostHandler) ListPosts(ctx *gofr.Context) (any, error) {
 	return ph.successResponse("Posts retrieved successfully", posts), nil
 }
 
-// UpdatePost handles PUT /api/v1/posts/{id}
+// UpdatePost handles PUT /posts/{id}
 func (ph *PostHandler) UpdatePost(ctx *gofr.Context) (any, error) {
 	// Parameter extraction decorator
 	id, err := ph.extractIDParam(ctx)
@@ -85,6 +90,11 @@ func (ph *PostHandler) UpdatePost(ctx *gofr.Context) (any, error) {
 		return ph.errorResponse("Invalid request format", parseErr), nil
 	}
 
+	// Validation decorator - moved from service to handler
+	if err := ph.validateUpdateRequest(req); err != nil {
+		return ph.errorResponse("Validation failed", err), nil
+	}
+
 	// Service call decorator
 	post, err := ph.postService.UpdatePost(ctx, id, req)
 	if err != nil {
@@ -94,7 +104,7 @@ func (ph *PostHandler) UpdatePost(ctx *gofr.Context) (any, error) {
 	return ph.successResponse("Post updated successfully", post), nil
 }
 
-// DeletePost handles DELETE /api/v1/posts/{id}
+// DeletePost handles DELETE /posts/{id}
 func (ph *PostHandler) DeletePost(ctx *gofr.Context) (any, error) {
 	// Parameter extraction decorator
 	id, err := ph.extractIDParam(ctx)
@@ -115,7 +125,7 @@ func (ph *PostHandler) DeletePost(ctx *gofr.Context) (any, error) {
 
 // Private helper methods (decorator pattern for consistent behavior)
 
-// parseCreateRequest parses and validates create post request
+// parseCreateRequest parses create post request
 func (ph *PostHandler) parseCreateRequest(ctx *gofr.Context, req *models.CreatePostRequest) error {
 	if err := ctx.Bind(req); err != nil {
 		return fmt.Errorf("failed to parse request body: %w", err)
@@ -123,10 +133,66 @@ func (ph *PostHandler) parseCreateRequest(ctx *gofr.Context, req *models.CreateP
 	return nil
 }
 
-// parseUpdateRequest parses and validates update post request
+// parseUpdateRequest parses update post request
 func (ph *PostHandler) parseUpdateRequest(ctx *gofr.Context, req *models.UpdatePostRequest) error {
 	if err := ctx.Bind(req); err != nil {
 		return fmt.Errorf("failed to parse request body: %w", err)
+	}
+	return nil
+}
+
+// validateCreateRequest validates the create post request
+func (ph *PostHandler) validateCreateRequest(req models.CreatePostRequest) error {
+	if req.Title == "" {
+		return fmt.Errorf("title is required")
+	}
+	if len(req.Title) < 3 || len(req.Title) > 200 {
+		return fmt.Errorf("title must be between 3 and 200 characters")
+	}
+	if req.Content == "" {
+		return fmt.Errorf("content is required")
+	}
+	if len(req.Content) < 10 {
+		return fmt.Errorf("content must be at least 10 characters")
+	}
+	if req.Slug == "" {
+		return fmt.Errorf("slug is required")
+	}
+	if req.AuthorID <= 0 {
+		return fmt.Errorf("valid author ID is required")
+	}
+	if req.Status == "" {
+		req.Status = "draft"
+	}
+	validStatuses := []string{"draft", "published", "archived"}
+	for _, status := range validStatuses {
+		if req.Status == status {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid status: %s", req.Status)
+}
+
+// validateUpdateRequest validates the update post request
+func (ph *PostHandler) validateUpdateRequest(req models.UpdatePostRequest) error {
+	if req.Title != "" && (len(req.Title) < 3 || len(req.Title) > 200) {
+		return fmt.Errorf("title must be between 3 and 200 characters")
+	}
+	if req.Content != "" && len(req.Content) < 10 {
+		return fmt.Errorf("content must be at least 10 characters")
+	}
+	if req.Status != "" {
+		validStatuses := []string{"draft", "published", "archived"}
+		valid := false
+		for _, status := range validStatuses {
+			if req.Status == status {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return fmt.Errorf("invalid status: %s", req.Status)
+		}
 	}
 	return nil
 }

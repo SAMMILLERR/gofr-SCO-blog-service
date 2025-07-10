@@ -1,23 +1,25 @@
 package main
 
 import (
+	"gofr-blog-service/database"
 	"gofr-blog-service/handlers"
 	"gofr-blog-service/services"
+	"gofr-blog-service/store"
 
 	"gofr.dev/pkg/gofr"
-	"gofr.dev/pkg/gofr/migration"
 )
 
 func main() {
 	app := gofr.New()
 
-	// Add database migrations
-	app.Migrate(map[int64]migration.Migrate{
-		1: createPostsTable(),
-	})
+	// Add database migrations - moved to database package
+	app.Migrate(database.GetMigrations())
 
-	// Initialize services
-	postService := services.NewPostService()
+	// Initialize store (new layer)
+	postStore := store.NewPostStore()
+
+	// Initialize services with store dependency
+	postService := services.NewPostService(postStore)
 
 	// Initialize handlers
 	postHandler := handlers.NewPostHandler(postService)
@@ -31,7 +33,7 @@ func main() {
 		}, nil
 	})
 
-	// Simplified Post routes (removed /api/v1 prefix)
+	// Simplified Post routes 
 	app.GET("/posts", postHandler.ListPosts)
 	app.GET("/posts/{id}", postHandler.GetPost)
 	app.POST("/posts", postHandler.CreatePost)
@@ -39,31 +41,4 @@ func main() {
 	app.DELETE("/posts/{id}", postHandler.DeletePost)
 
 	app.Run()
-}
-
-// createPostsTable defines the migration for creating posts table
-func createPostsTable() migration.Migrate {
-	return migration.Migrate{
-		UP: func(datasource migration.Datasource) error {
-			_, err := datasource.SQL.Exec(`
-				CREATE TABLE IF NOT EXISTS posts (
-					id SERIAL PRIMARY KEY,
-					title VARCHAR(200) NOT NULL,
-					content TEXT NOT NULL,
-					slug VARCHAR(200) NOT NULL UNIQUE,
-					author_id INTEGER NOT NULL,
-					status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
-					created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-					updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-				);
-
-				-- Create indexes for better performance
-				CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
-				CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
-				CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at);
-				CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
-			`)
-			return err
-		},
-	}
 }
