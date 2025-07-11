@@ -1,13 +1,20 @@
 package handlers
 
 import (
-	"fmt"
-	"strconv"
+	"errors"
 
 	"gofr-blog-service/models"
 	"gofr-blog-service/services"
 
 	"gofr.dev/pkg/gofr"
+)
+
+// Error definitions
+var (
+	ErrInvalidRequest = errors.New("invalid request format")
+	ErrValidation     = errors.New("validation failed")
+	ErrInvalidID      = errors.New("invalid post ID")
+	ErrNotFound       = errors.New("post not found")
 )
 
 // PostHandler handles HTTP requests for posts with decorators pattern
@@ -91,8 +98,8 @@ func (ph *PostHandler) UpdatePost(ctx *gofr.Context) (any, error) {
 	}
 
 	// Validation decorator - moved from service to handler
-	if err := ph.validateUpdateRequest(req); err != nil {
-		return ph.errorResponse("Validation failed", err), nil
+	if validateErr := ph.validateUpdateRequest(req); validateErr != nil {
+		return ph.errorResponse("Validation failed", validateErr), nil
 	}
 
 	// Service call decorator
@@ -123,119 +130,6 @@ func (ph *PostHandler) DeletePost(ctx *gofr.Context) (any, error) {
 	}), nil
 }
 
-// Private helper methods (decorator pattern for consistent behavior)
-
-// parseCreateRequest parses create post request
-func (ph *PostHandler) parseCreateRequest(ctx *gofr.Context, req *models.CreatePostRequest) error {
-	if err := ctx.Bind(req); err != nil {
-		return fmt.Errorf("failed to parse request body: %w", err)
-	}
-	return nil
-}
-
-// parseUpdateRequest parses update post request
-func (ph *PostHandler) parseUpdateRequest(ctx *gofr.Context, req *models.UpdatePostRequest) error {
-	if err := ctx.Bind(req); err != nil {
-		return fmt.Errorf("failed to parse request body: %w", err)
-	}
-	return nil
-}
-
-// validateCreateRequest validates the create post request
-func (ph *PostHandler) validateCreateRequest(req models.CreatePostRequest) error {
-	if req.Title == "" {
-		return fmt.Errorf("title is required")
-	}
-	if len(req.Title) < 3 || len(req.Title) > 200 {
-		return fmt.Errorf("title must be between 3 and 200 characters")
-	}
-	if req.Content == "" {
-		return fmt.Errorf("content is required")
-	}
-	if len(req.Content) < 10 {
-		return fmt.Errorf("content must be at least 10 characters")
-	}
-	if req.Slug == "" {
-		return fmt.Errorf("slug is required")
-	}
-	if req.AuthorID <= 0 {
-		return fmt.Errorf("valid author ID is required")
-	}
-	if req.Status == "" {
-		req.Status = "draft"
-	}
-	validStatuses := []string{"draft", "published", "archived"}
-	for _, status := range validStatuses {
-		if req.Status == status {
-			return nil
-		}
-	}
-	return fmt.Errorf("invalid status: %s", req.Status)
-}
-
-// validateUpdateRequest validates the update post request
-func (ph *PostHandler) validateUpdateRequest(req models.UpdatePostRequest) error {
-	if req.Title != "" && (len(req.Title) < 3 || len(req.Title) > 200) {
-		return fmt.Errorf("title must be between 3 and 200 characters")
-	}
-	if req.Content != "" && len(req.Content) < 10 {
-		return fmt.Errorf("content must be at least 10 characters")
-	}
-	if req.Status != "" {
-		validStatuses := []string{"draft", "published", "archived"}
-		valid := false
-		for _, status := range validStatuses {
-			if req.Status == status {
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			return fmt.Errorf("invalid status: %s", req.Status)
-		}
-	}
-	return nil
-}
-
-// extractIDParam extracts and validates ID parameter from URL
-func (ph *PostHandler) extractIDParam(ctx *gofr.Context) (int, error) {
-	idStr := ctx.PathParam("id")
-	if idStr == "" {
-		return 0, fmt.Errorf("missing post ID")
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		return 0, fmt.Errorf("invalid post ID format: %s", idStr)
-	}
-
-	if id <= 0 {
-		return 0, fmt.Errorf("post ID must be positive: %d", id)
-	}
-
-	return id, nil
-}
-
-// extractPaginationParams extracts pagination parameters with defaults
-func (ph *PostHandler) extractPaginationParams(ctx *gofr.Context) (page, pageSize int) {
-	page = 1
-	pageSize = 10
-
-	if pageStr := ctx.Param("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
-			page = p
-		}
-	}
-
-	if pageSizeStr := ctx.Param("page_size"); pageSizeStr != "" {
-		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
-			pageSize = ps
-		}
-	}
-
-	return page, pageSize
-}
-
 // Response formatting decorators for consistent API responses
 
 // successResponse creates a standardized success response
@@ -260,10 +154,3 @@ func (ph *PostHandler) errorResponse(message string, err error) map[string]any {
 
 	return response
 }
-
-// Middleware decorators can be added here for cross-cutting concerns:
-// - Authentication
-// - Rate limiting
-// - Request logging
-// - Input sanitization
-// - Response compression
