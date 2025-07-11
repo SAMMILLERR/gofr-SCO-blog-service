@@ -15,22 +15,28 @@ A lightweight Content Management System (CMS) built with GoFr framework offering
 ```
 ├── main.go                  # Application entry point
 ├── handlers/                # HTTP handlers
-│   └── posts.go
+│   ├── handlers.go          # Main handler functions
+│   └── validation.go        # Request validation logic
 ├── models/                  # Data models
 │   └── post.go
 ├── services/                # Business logic
 │   ├── post_service.go
-│   └── post_service_test.go
-├── database/                # Database layer
-│   └── migrations/
-│       └── 001_create_posts.sql
+│   ├── post_service_test.go
+│   └── errors.go            # Service-level errors
+├── store/                   # Data access layer
+│   ├── post_store.go        # Post repository implementation
+│   ├── post_store_test.go   # Tests for post repository
+│   └── queries.go           # SQL queries
+├── migrations/              # Database migrations
+│   └── migrations.go        # GoFr migrations implementation
+├── configs/                 # Configuration files
+│   └── .env                 # Environment configuration
 ├── integration_test.go      # Integration tests
 ├── swagger.yaml             # API documentation
-├── .golangci.yml           # Linter configuration
-├── .env.example
+├── .golangci.yml            # Linter configuration
 ├── go.mod
 ├── go.sum
-└── bin/                    # Built binaries
+└── bin/                     # Built binaries
     └── blog-service
 ```
 
