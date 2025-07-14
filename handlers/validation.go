@@ -12,7 +12,7 @@ import (
 // parseCreateRequest parses create post request
 func (ph *PostHandler) parseCreateRequest(ctx *gofr.Context, req *models.CreatePostRequest) error {
 	if err := ctx.Bind(req); err != nil {
-		return errors.Join(ErrInvalidRequest, err)
+		return errors.Join(errInvalidRequest, err)
 	}
 	return nil
 }
@@ -20,7 +20,7 @@ func (ph *PostHandler) parseCreateRequest(ctx *gofr.Context, req *models.CreateP
 // parseUpdateRequest parses update post request
 func (ph *PostHandler) parseUpdateRequest(ctx *gofr.Context, req *models.UpdatePostRequest) error {
 	if err := ctx.Bind(req); err != nil {
-		return errors.Join(ErrInvalidRequest, err)
+		return errors.Join(errInvalidRequest, err)
 	}
 	return nil
 }
@@ -28,22 +28,22 @@ func (ph *PostHandler) parseUpdateRequest(ctx *gofr.Context, req *models.UpdateP
 // validateCreateRequest validates the create post request
 func (ph *PostHandler) validateCreateRequest(req models.CreatePostRequest) error {
 	if req.Title == "" {
-		return errors.Join(ErrValidation, errors.New("title is required"))
+		return errors.Join(errValidation, errors.New("title is required"))
 	}
 	if len(req.Title) < 3 || len(req.Title) > 200 {
-		return errors.Join(ErrValidation, errors.New("title must be between 3 and 200 characters"))
+		return errors.Join(errValidation, errors.New("title must be between 3 and 200 characters"))
 	}
 	if req.Content == "" {
-		return errors.Join(ErrValidation, errors.New("content is required"))
+		return errors.Join(errValidation, errors.New("content is required"))
 	}
 	if len(req.Content) < 10 {
-		return errors.Join(ErrValidation, errors.New("content must be at least 10 characters"))
+		return errors.Join(errValidation, errors.New("content must be at least 10 characters"))
 	}
 	if req.Slug == "" {
-		return errors.Join(ErrValidation, errors.New("slug is required"))
+		return errors.Join(errValidation, errors.New("slug is required"))
 	}
 	if req.AuthorID <= 0 {
-		return errors.Join(ErrValidation, errors.New("valid author ID is required"))
+		return errors.Join(errValidation, errors.New("valid author ID is required"))
 	}
 	if req.Status == "" {
 		req.Status = "draft"
@@ -54,16 +54,16 @@ func (ph *PostHandler) validateCreateRequest(req models.CreatePostRequest) error
 			return nil
 		}
 	}
-	return errors.Join(ErrValidation, errors.New("invalid status: "+req.Status))
+	return errors.Join(errValidation, errors.New("invalid status: "+req.Status))
 }
 
 // validateUpdateRequest validates the update post request
 func (ph *PostHandler) validateUpdateRequest(req models.UpdatePostRequest) error {
 	if req.Title != "" && (len(req.Title) < 3 || len(req.Title) > 200) {
-		return errors.Join(ErrValidation, errors.New("title must be between 3 and 200 characters"))
+		return errors.Join(errValidation, errors.New("title must be between 3 and 200 characters"))
 	}
 	if req.Content != "" && len(req.Content) < 10 {
-		return errors.Join(ErrValidation, errors.New("content must be at least 10 characters"))
+		return errors.Join(errValidation, errors.New("content must be at least 10 characters"))
 	}
 	if req.Status != "" {
 		validStatuses := []string{"draft", "published", "archived"}
@@ -75,7 +75,7 @@ func (ph *PostHandler) validateUpdateRequest(req models.UpdatePostRequest) error
 			}
 		}
 		if !valid {
-			return errors.Join(ErrValidation, errors.New("invalid status: "+req.Status))
+			return errors.Join(errValidation, errors.New("invalid status: "+req.Status))
 		}
 	}
 	return nil
@@ -85,16 +85,16 @@ func (ph *PostHandler) validateUpdateRequest(req models.UpdatePostRequest) error
 func (ph *PostHandler) extractIDParam(ctx *gofr.Context) (int, error) {
 	idStr := ctx.PathParam("id")
 	if idStr == "" {
-		return 0, errors.Join(ErrInvalidID, errors.New("missing post ID"))
+		return 0, errors.Join(errInvalidID, errors.New("missing post ID"))
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return 0, errors.Join(ErrInvalidID, errors.New("invalid post ID format: "+idStr))
+		return 0, errors.Join(errInvalidID, errors.New("invalid post ID format: "+idStr))
 	}
 
 	if id <= 0 {
-		return 0, errors.Join(ErrInvalidID, errors.New("post ID must be positive"))
+		return 0, errors.Join(errInvalidID, errors.New("post ID must be positive"))
 	}
 
 	return id, nil

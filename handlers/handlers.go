@@ -11,10 +11,9 @@ import (
 
 // Error definitions
 var (
-	ErrInvalidRequest = errors.New("invalid request format")
-	ErrValidation     = errors.New("validation failed")
-	ErrInvalidID      = errors.New("invalid post ID")
-	ErrNotFound       = errors.New("post not found")
+	errInvalidRequest = errors.New("invalid request format")
+	errValidation     = errors.New("validation failed")
+	errInvalidID      = errors.New("invalid post ID")
 )
 
 // PostHandler handles HTTP requests for posts with decorators pattern

@@ -1,12 +1,8 @@
 package main
 
 import (
-	// Standard library imports first (none here)
-
-	// External packages next
 	"gofr.dev/pkg/gofr"
 
-	// Internal packages last, sorted alphabetically
 	"gofr-blog-service/handlers"
 	"gofr-blog-service/migrations"
 	"gofr-blog-service/services"
@@ -17,7 +13,7 @@ func main() {
 	app := gofr.New()
 
 	// Add database migrations from migrations package
-	app.Migrate(migrations.GetMigrations())
+	app.Migrate(migrations.All())
 
 	// Initialize store (new layer)
 	postStore := store.NewPostStore()

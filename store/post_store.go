@@ -13,10 +13,10 @@ import (
 
 // Error definitions
 var (
-	ErrDatabaseOperation = errors.New("database operation failed")
-	ErrNotFound          = errors.New("record not found")
-	ErrNoFieldsToUpdate  = errors.New("no fields to update")
-	ErrInvalidID         = errors.New("invalid ID")
+	errDatabaseOperation = errors.New("database operation failed")
+	errNotFound          = errors.New("record not found")
+	errNoFieldsToUpdate  = errors.New("no fields to update")
+	errInvalidID         = errors.New("invalid ID")
 )
 
 // PostStore handles database operations for posts
@@ -39,7 +39,7 @@ func (ps *PostStore) CreatePost(ctx *gofr.Context, post models.CreatePostRequest
 	)
 
 	if err != nil {
-		return nil, errors.Join(ErrDatabaseOperation, err)
+		return nil, errors.Join(errDatabaseOperation, err)
 	}
 
 	return &createdPost, nil
@@ -48,7 +48,7 @@ func (ps *PostStore) CreatePost(ctx *gofr.Context, post models.CreatePostRequest
 // GetPostByID retrieves a single post from the database by ID
 func (ps *PostStore) GetPostByID(ctx *gofr.Context, id int) (*models.Post, error) {
 	if id <= 0 {
-		return nil, ErrInvalidID
+		return nil, errInvalidID
 	}
 
 	var post models.Post
@@ -59,9 +59,9 @@ func (ps *PostStore) GetPostByID(ctx *gofr.Context, id int) (*models.Post, error
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, errNotFound
 		}
-		return nil, errors.Join(ErrDatabaseOperation, err)
+		return nil, errors.Join(errDatabaseOperation, err)
 	}
 
 	return &post, nil
@@ -71,7 +71,7 @@ func (ps *PostStore) GetPostByID(ctx *gofr.Context, id int) (*models.Post, error
 func (ps *PostStore) GetPosts(ctx *gofr.Context, limit, offset int) ([]models.Post, error) {
 	rows, err := ctx.SQL.Query(GetPostsQuery, limit, offset)
 	if err != nil {
-		return nil, errors.Join(ErrDatabaseOperation, err)
+		return nil, errors.Join(errDatabaseOperation, err)
 	}
 	defer rows.Close()
 
@@ -83,13 +83,13 @@ func (ps *PostStore) GetPosts(ctx *gofr.Context, limit, offset int) ([]models.Po
 			&post.Status, &post.CreatedAt, &post.UpdatedAt,
 		)
 		if scanErr != nil {
-			return nil, errors.Join(ErrDatabaseOperation, scanErr)
+			return nil, errors.Join(errDatabaseOperation, scanErr)
 		}
 		posts = append(posts, post)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, errors.Join(ErrDatabaseOperation, err)
+		return nil, errors.Join(errDatabaseOperation, err)
 	}
 
 	return posts, nil
@@ -100,7 +100,7 @@ func (ps *PostStore) GetTotalPostCount(ctx *gofr.Context) (int, error) {
 	var totalCount int
 	err := ctx.SQL.QueryRow(GetTotalPostCountQuery).Scan(&totalCount)
 	if err != nil {
-		return 0, errors.Join(ErrDatabaseOperation, err)
+		return 0, errors.Join(errDatabaseOperation, err)
 	}
 	return totalCount, nil
 }
@@ -108,13 +108,13 @@ func (ps *PostStore) GetTotalPostCount(ctx *gofr.Context) (int, error) {
 // UpdatePost updates an existing post in the database
 func (ps *PostStore) UpdatePost(ctx *gofr.Context, id int, req models.UpdatePostRequest) (*models.Post, error) {
 	if id <= 0 {
-		return nil, ErrInvalidID
+		return nil, errInvalidID
 	}
 
 	// Build dynamic update query
 	query, args := ps.buildUpdateQuery(id, req)
 	if len(args) == 1 { // Only ID provided
-		return nil, ErrNoFieldsToUpdate
+		return nil, errNoFieldsToUpdate
 	}
 
 	var post models.Post
@@ -125,9 +125,9 @@ func (ps *PostStore) UpdatePost(ctx *gofr.Context, id int, req models.UpdatePost
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, errNotFound
 		}
-		return nil, errors.Join(ErrDatabaseOperation, err)
+		return nil, errors.Join(errDatabaseOperation, err)
 	}
 
 	return &post, nil
@@ -136,21 +136,21 @@ func (ps *PostStore) UpdatePost(ctx *gofr.Context, id int, req models.UpdatePost
 // DeletePost removes a post from the database by ID
 func (ps *PostStore) DeletePost(ctx *gofr.Context, id int) error {
 	if id <= 0 {
-		return ErrInvalidID
+		return errInvalidID
 	}
 
 	result, err := ctx.SQL.Exec(DeletePostQuery, id)
 	if err != nil {
-		return errors.Join(ErrDatabaseOperation, err)
+		return errors.Join(errDatabaseOperation, err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return errors.Join(ErrDatabaseOperation, err)
+		return errors.Join(errDatabaseOperation, err)
 	}
 
 	if rowsAffected == 0 {
-		return ErrNotFound
+		return errNotFound
 	}
 
 	return nil
