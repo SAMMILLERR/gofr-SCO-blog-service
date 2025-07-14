@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"strconv"
+	"regexp"
 
 	"gofr-blog-service/models"
 
@@ -118,4 +119,111 @@ func (ph *PostHandler) extractPaginationParams(ctx *gofr.Context) (page, pageSiz
 	}
 
 	return page, pageSize
+}
+
+// ValidateRegisterRequest validates the register request
+func ValidateRegisterRequest(req *models.RegisterRequest) error {
+	if req.Username == "" {
+		return errors.New("username is required")
+	}
+	if len(req.Username) < 3 || len(req.Username) > 50 {
+		return errors.New("username must be between 3 and 50 characters")
+	}
+	if !isValidUsername(req.Username) {
+		return errors.New("username can only contain letters, numbers, and underscores")
+	}
+
+	if req.Email == "" {
+		return errors.New("email is required")
+	}
+	if !isValidEmail(req.Email) {
+		return errors.New("invalid email format")
+	}
+
+	if req.Password == "" {
+		return errors.New("password is required")
+	}
+	if len(req.Password) < 8 {
+		return errors.New("password must be at least 8 characters long")
+	}
+
+	if req.FirstName == "" {
+		return errors.New("first name is required")
+	}
+	if len(req.FirstName) < 2 || len(req.FirstName) > 50 {
+		return errors.New("first name must be between 2 and 50 characters")
+	}
+
+	if req.LastName == "" {
+		return errors.New("last name is required")
+	}
+	if len(req.LastName) < 2 || len(req.LastName) > 50 {
+		return errors.New("last name must be between 2 and 50 characters")
+	}
+
+	if req.Bio != "" && len(req.Bio) > 500 {
+		return errors.New("bio cannot exceed 500 characters")
+	}
+
+	if req.AvatarURL != "" && !isValidURL(req.AvatarURL) {
+		return errors.New("invalid avatar URL format")
+	}
+
+	return nil
+}
+
+// ValidateLoginRequest validates the login request
+func ValidateLoginRequest(req *models.LoginRequest) error {
+	if req.Username == "" {
+		return errors.New("username or email is required")
+	}
+
+	if req.Password == "" {
+		return errors.New("password is required")
+	}
+
+	return nil
+}
+
+// ValidateUpdateAuthorRequest validates the update author request
+func ValidateUpdateAuthorRequest(req *models.UpdateAuthorRequest) error {
+	if req.Email != "" && !isValidEmail(req.Email) {
+		return errors.New("invalid email format")
+	}
+
+	if req.FirstName != "" && (len(req.FirstName) < 2 || len(req.FirstName) > 50) {
+		return errors.New("first name must be between 2 and 50 characters")
+	}
+
+	if req.LastName != "" && (len(req.LastName) < 2 || len(req.LastName) > 50) {
+		return errors.New("last name must be between 2 and 50 characters")
+	}
+
+	if req.Bio != nil && len(*req.Bio) > 500 {
+		return errors.New("bio cannot exceed 500 characters")
+	}
+
+	if req.AvatarURL != nil && *req.AvatarURL != "" && !isValidURL(*req.AvatarURL) {
+		return errors.New("invalid avatar URL format")
+	}
+
+	return nil
+}
+
+// Helper validation functions
+func isValidUsername(username string) bool {
+	matched, _ := regexp.MatchString(`^[a-zA-Z0-9_]+$`, username)
+	return matched
+}
+
+func isValidEmail(email string) bool {
+	// Basic email validation regex
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
+}
+
+func isValidURL(url string) bool {
+	// Basic URL validation
+	urlRegex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
+	return urlRegex.MatchString(url)
 }
