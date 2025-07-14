@@ -1,0 +1,70 @@
+# golangci-lint configuration
+# Based on GoFr's recommended linter configuration
+
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  govet:
+    enable:
+      - shadow
+  gocyclo:
+    min-complexity: 15
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  misspell:
+    locale: US
+  lll:
+    line-length: 120
+  goimports:
+    local-prefixes: gofr-blog-service
+  gocritic:
+    enabled-tags:
+      - performance
+      - style
+      - experimental
+    disabled-checks:
+      - wrapperFunc
+
+linters:
+  enable:
+    - bodyclose
+    - dogsled
+    - dupl
+    - errcheck
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - staticcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+
+issues:
+  exclude:
+    - "G304: Potential file inclusion via variable"

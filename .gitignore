@@ -12,6 +12,8 @@
 # Build artifacts
 /bin
 /dist
+server.exe
+*.exe
 
 # OS
 .DS_Store
@@ -24,3 +26,9 @@ Thumbs.db
 # Test coverage
 coverage.out
 *.cover
+
+# Discussion templates and docs
+discussion-template.md
+*discussion*.md
+GITHUB_DISCUSSION_TEMPLATE.md
+DEVELOPMENT_GUIDE.md

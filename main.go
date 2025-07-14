@@ -1,17 +1,44 @@
-// This file will be moved to cmd/server/main.go in PR #1
 package main
 
 import (
-    "fmt"
-    "net/http"
+	"gofr.dev/pkg/gofr"
+
+	"gofr-blog-service/handlers"
+	"gofr-blog-service/migrations"
+	"gofr-blog-service/services"
+	"gofr-blog-service/store"
 )
 
 func main() {
-    http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Content-Type", "application/json")
-        fmt.Fprintf(w, `{"status": "healthy", "service": "gofr-blog-service"}`)
-    })
-    
-    fmt.Println("Server starting on :8080")
-    http.ListenAndServe(":8080", nil)
+	app := gofr.New()
+
+	// Add database migrations from migrations package
+	app.Migrate(migrations.All())
+
+	// Initialize store (new layer)
+	postStore := store.NewPostStore()
+
+	// Initialize services with store dependency
+	postService := services.NewPostService(postStore)
+
+	// Initialize handlers
+	postHandler := handlers.NewPostHandler(postService)
+
+	// Health check
+	app.GET("/health", func(ctx *gofr.Context) (any, error) {
+		return map[string]string{
+			"status":  "healthy",
+			"service": "gofr-blog-service",
+			"version": "1.0.0",
+		}, nil
+	})
+
+	// Simplified Post routes
+	app.GET("/posts", postHandler.ListPosts)
+	app.GET("/posts/{id}", postHandler.GetPost)
+	app.POST("/posts", postHandler.CreatePost)
+	app.PUT("/posts/{id}", postHandler.UpdatePost)
+	app.DELETE("/posts/{id}", postHandler.DeletePost)
+
+	app.Run()
 }
